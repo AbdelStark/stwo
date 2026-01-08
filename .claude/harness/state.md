@@ -1,7 +1,7 @@
 # STWO Performance Optimization Progress
 
 ## Current Focus
-Phase 2: Core Optimizations - FRI and quotient improvements
+Phase 4: Advanced Optimizations - Poseidon252 SIMD and SecureField bit reversal
 
 ## Implementation Status
 
@@ -24,15 +24,15 @@ Phase 2: Core Optimizations - FRI and quotient improvements
 | Optimization | Status | Notes |
 |--------------|--------|-------|
 | Blocked transpose | ⏳ Deferred | fft/mod.rs:36-38 - Added TODO; blocked implementation buggy, needs more investigation |
-| Butterfly-permute fusion | ⏳ Pending | rfft.rs:378, ifft.rs:339 |
+| Butterfly-permute fusion | ⏳ Deferred | rfft.rs:378, ifft.rs:339 - Documented analysis; fusion is arch-specific and may not yield significant gains |
 | Architecture-specific tuning | ⏳ Pending | Platform-specific optimizations |
 
 ### Phase 4: Advanced Optimizations (Target: 30-50% cumulative)
 | Optimization | Status | Notes |
 |--------------|--------|-------|
-| Poseidon252 SIMD | ⏳ Pending | poseidon252.rs:24 - Vectorize hashing |
+| Poseidon252 SIMD | ⏳ Deferred | poseidon252.rs:24 - Requires reimplementing Poseidon for 252-bit field with AVX-512; current uses Rayon parallelism |
 | Memory pool implementation | ⏳ Pending | Hot allocation pooling |
-| SecureField bit reversal | ⏳ Pending | bit_reverse.rs:39-42 |
+| SecureField bit reversal | ✅ Completed | bit_reverse.rs - Implemented bit_reverse_secure() and bit_reverse16_secure() for QM31 |
 
 ## Legend
 - ✅ Completed
@@ -42,3 +42,6 @@ Phase 2: Core Optimizations - FRI and quotient improvements
 
 ## Session Log
 - 2026-01-08: Completed Phase 1 optimizations (twiddle caching, GKR deduplication)
+- 2026-01-08: Completed Phase 2 optimizations (FRI direct folding, quotient memory, domain iteration)
+- 2026-01-08: Deferred Phase 3 FFT optimizations (blocked transpose, butterfly-permute fusion) - require deeper investigation
+- 2026-01-08: Implemented SecureField bit reversal; deferred Poseidon252 SIMD (requires 252-bit field SIMD)

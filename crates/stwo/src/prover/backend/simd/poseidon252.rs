@@ -21,7 +21,11 @@ impl ColumnOps<FieldElement252> for SimdBackend {
 }
 
 impl MerkleOps<Poseidon252MerkleHasher> for SimdBackend {
-    // TODO(ShaharS): replace with SIMD implementation.
+    // TODO(optimization): Replace with SIMD implementation.
+    // This is challenging because Poseidon252 operates on 252-bit field elements (4×64-bit limbs),
+    // not M31 (31-bit). True SIMD Poseidon would require reimplementing the permutation with
+    // AVX-512 64-bit vector operations. Current implementation uses thread-level parallelism
+    // via parallel_iter! which provides reasonable performance.
     fn commit_on_layer(
         log_size: u32,
         prev_layer: Option<&Vec<FieldElement252>>,
