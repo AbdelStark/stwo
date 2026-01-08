@@ -336,7 +336,13 @@ pub fn vecwise_ibutterflies(
     twiddle2_dbl: [u32; 4],
     twiddle3_dbl: [u32; 2],
 ) -> (PackedBaseField, PackedBaseField) {
-    // TODO(andrew): Can the permute be fused with the _mm512_srli_epi64 inside the butterfly?
+    // TODO(optimization): Butterfly-permute fusion opportunity.
+    // The deinterleave permute could potentially be fused with the _mm512_srli_epi64 inside
+    // mul_doubled_avx512. However, these operate on different "axes":
+    // - deinterleave reorganizes elements between two registers for ibutterfly pairing
+    // - srli_epi64 extracts odd elements within a register for multiplication
+    // Fusion would require architecture-specific implementations and may not yield significant
+    // speedups due to instruction-level parallelism on modern CPUs.
 
     // Each `ibutterfly` take 2 512-bit registers, and does 16 butterflies element by element.
     // We need to permute the 512-bit registers to get the right order for the butterflies.

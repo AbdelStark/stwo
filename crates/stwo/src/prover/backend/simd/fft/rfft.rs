@@ -375,7 +375,14 @@ pub fn vecwise_butterflies(
     twiddle2_dbl: [u32; 4],
     twiddle3_dbl: [u32; 2],
 ) -> (PackedBaseField, PackedBaseField) {
-    // TODO(andrew): Can the permute be fused with the _mm512_srli_epi64 inside the butterfly?
+    // TODO(optimization): Butterfly-permute fusion opportunity.
+    // The interleave permute could potentially be fused with the _mm512_srli_epi64 inside
+    // mul_doubled_avx512. However, these operate on different "axes":
+    // - interleave reorganizes elements between two registers for butterfly pairing
+    // - srli_epi64 extracts odd elements within a register for multiplication
+    // Fusion would require architecture-specific implementations and may not yield significant
+    // speedups due to instruction-level parallelism on modern CPUs.
+    //
     // The implementation is the exact reverse of vecwise_ibutterflies().
     // See the comments in its body for more info.
     let t = simd_swizzle!(

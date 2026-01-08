@@ -4,10 +4,11 @@ use num_traits::Zero;
 use rayon::prelude::*;
 use tracing::{span, Level};
 
+use super::circle::evaluate_into_slice;
 use super::cm31::PackedCM31;
 use super::column::CM31Column;
-use super::domain::CircleDomainBitRevIterator;
-use super::m31::{PackedBaseField, LOG_N_LANES, N_LANES};
+use super::domain::{extract_spaced_ys, CircleDomainBitRevIterator};
+use super::m31::{PackedBaseField, PackedM31, LOG_N_LANES, N_LANES};
 use super::qm31::PackedSecureField;
 use super::SimdBackend;
 use crate::core::circle::CirclePoint;
@@ -82,18 +83,19 @@ impl QuotientOps for SimdBackend {
         );
 
         // Extend the evaluation to the full domain.
-        // TODO(Ohad): Try to optimize out all these copies.
+        // Optimized: write directly to destination slice, avoiding intermediate allocations.
         for (ci, &c) in subdomain_shifts.iter().enumerate() {
             let subdomain = subdomain.shift(c);
 
             let twiddles = SimdBackend::precompute_twiddles(subdomain.half_coset);
+            let slice_len = subdomain.size() >> LOG_N_LANES;
             for (subeval_poly, extended_eval_column) in
                 zip_eq(&subeval_polys, &mut extended_eval.columns)
             {
-                // Sanity check.
-                let eval = subeval_poly.evaluate_with_twiddles(subdomain, &twiddles);
-                extended_eval_column.data[(ci * eval.data.len())..((ci + 1) * eval.data.len())]
-                    .copy_from_slice(&eval.data);
+                // Evaluate directly into the destination slice.
+                let dst_slice =
+                    &mut extended_eval_column.data[(ci * slice_len)..((ci + 1) * slice_len)];
+                evaluate_into_slice(subeval_poly, subdomain, &twiddles, dst_slice);
             }
         }
         span.exit();
@@ -129,15 +131,12 @@ fn accumulate_quotients_on_subdomain(
     let accumulate = |(quad_row, (points, mut values_dst)): (
         usize,
         (
-            [CirclePoint<PackedBaseField>; 4],
+            [CirclePoint<PackedM31>; 4],
             SecureColumnByCoordsMutSlice<'_>,
         ),
     )| {
-        // TODO(andrew): Spapini said: Use optimized domain iteration. Is there a better way to
-        // do this?
-        let (y01, _) = points[0].y.deinterleave(points[1].y);
-        let (y23, _) = points[2].y.deinterleave(points[3].y);
-        let (spaced_ys, _) = y01.deinterleave(y23);
+        // Extract spaced y values from the 4 consecutive packed points.
+        let spaced_ys = extract_spaced_ys(points[0].y, points[1].y, points[2].y, points[3].y);
         let row_accumulator = accumulate_row_quotients(
             sample_batches,
             columns,

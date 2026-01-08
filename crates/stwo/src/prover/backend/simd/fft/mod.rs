@@ -33,6 +33,9 @@ pub const MIN_FFT_LOG_SIZE: u32 = 5;
 /// # Safety
 ///
 /// Behavior is undefined if `values` does not have the same alignment as [`u32x16`].
+// TODO(optimization): Implement blocked transpose for better cache locality on large arrays.
+// The current implementation can cause cache thrashing for very large FFTs.
+// A blocked version should process tiles that fit in L1/L2 cache.
 pub unsafe fn transpose_vecs(values: *mut u32, log_n_vecs: usize) {
     let half = log_n_vecs / 2;
 

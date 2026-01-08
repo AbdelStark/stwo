@@ -33,6 +33,15 @@ impl<B: ColumnOps<BaseField>> LineEvaluation<B> {
         Self::new(domain, SecureColumnByCoords::zeros(domain.size()))
     }
 
+    /// Creates a new [LineEvaluation] with uninitialized memory.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure all positions are written to before reading.
+    pub unsafe fn new_uninitialized(domain: LineDomain) -> Self {
+        Self::new(domain, SecureColumnByCoords::uninitialized(domain.size()))
+    }
+
     /// Returns the number of evaluations.
     #[allow(clippy::len_without_is_empty)]
     pub const fn len(&self) -> usize {
