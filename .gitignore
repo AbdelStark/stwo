@@ -9,3 +9,11 @@ target*
 flamegraph.svg
 perf.data
 perf.data.old
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Benchmark results
+benchmark-results/
