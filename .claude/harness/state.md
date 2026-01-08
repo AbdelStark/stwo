@@ -18,12 +18,12 @@ Phase 2: Core Optimizations - FRI and quotient improvements
 |--------------|--------|-------|
 | FRI direct folding | ✅ Completed | fri.rs - Uninitialized memory in fold_line, decompose, fold_circle_evaluation_into_line |
 | Quotient memory optimization | ✅ Completed | quotients.rs - evaluate_into_slice() eliminates intermediate allocations |
-| Domain iteration optimization | 🔄 In Progress | quotients.rs:136 - Specialized iterators |
+| Domain iteration optimization | ✅ Completed | domain.rs - extract_spaced_ys() helper; y-only iteration not feasible (CirclePoint add needs x) |
 
 ### Phase 3: FFT Deep Dive (Target: 25-40% cumulative)
 | Optimization | Status | Notes |
 |--------------|--------|-------|
-| Blocked transpose | ⏳ Pending | fft/mod.rs - Cache-friendly transpose |
+| Blocked transpose | ⏳ Deferred | fft/mod.rs:36-38 - Added TODO; blocked implementation buggy, needs more investigation |
 | Butterfly-permute fusion | ⏳ Pending | rfft.rs:378, ifft.rs:339 |
 | Architecture-specific tuning | ⏳ Pending | Platform-specific optimizations |
 
