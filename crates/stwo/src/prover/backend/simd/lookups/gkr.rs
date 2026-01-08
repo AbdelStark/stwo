@@ -21,8 +21,8 @@ use crate::prover::lookups::utils::{Reciprocal, UnivariatePoly};
 
 /// Trait for packed types that can be used as numerators in LogUp GKR layers.
 ///
-/// This trait abstracts over `PackedM31` (for multiplicities) and `PackedSecureField` (for generic),
-/// allowing code reuse in LogUp layer computation.
+/// This trait abstracts over `PackedM31` (for multiplicities) and `PackedSecureField` (for
+/// generic), allowing code reuse in LogUp layer computation.
 trait PackedLogUpNumerator: Clone + Copy + Sub<Output = Self> {
     /// Deinterleaves two packed values into evens and odds.
     fn deinterleave(self, other: Self) -> (Self, Self);
@@ -190,7 +190,11 @@ fn next_grand_product_layer(layer: &Mle<SimdBackend, SecureField>) -> Layer<Simd
 /// and multiplicities LogUp (with `BaseField` numerators).
 ///
 /// Assumption: `len(denominators) > N_LANES`.
-fn next_logup_layer<N>(numerator_data: &[N], denominator_data: &[PackedSecureField], len: usize) -> Layer<SimdBackend>
+fn next_logup_layer<N>(
+    numerator_data: &[N],
+    denominator_data: &[PackedSecureField],
+    len: usize,
+) -> Layer<SimdBackend>
 where
     N: PackedLogUpNumerator,
     PackedSecureField: Add<N, Output = PackedSecureField>

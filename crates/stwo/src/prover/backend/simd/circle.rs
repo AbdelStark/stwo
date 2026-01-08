@@ -1009,8 +1009,9 @@ mod tests {
 
     #[test]
     fn test_cached_inv_domain_sizes() {
-        use super::get_inv_domain_size;
         use num_traits::One;
+
+        use super::get_inv_domain_size;
 
         // Verify the cached inverse values are correct
         for log_size in 0..=32u32 {

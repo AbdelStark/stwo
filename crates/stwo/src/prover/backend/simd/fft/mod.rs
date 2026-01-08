@@ -11,7 +11,33 @@ use crate::parallel_iter;
 pub mod ifft;
 pub mod rfft;
 
-pub const CACHED_FFT_LOG_SIZE: u32 = 16;
+// FFT cached size threshold: determines when to use cached vs non-cached FFT algorithm.
+// This value should be tuned to match the L2/L3 cache size of the target architecture.
+// For a CACHED_FFT_LOG_SIZE of N, the FFT will cache up to 2^N elements (each 4 bytes).
+//
+// Architecture-specific tuning rationale:
+// - AVX512 (server CPUs): Large L3 caches (10-50MB), can cache larger FFTs (2^18 = 1MB)
+// - AVX2 (consumer CPUs): Moderate L3 (8-16MB), use 2^17 (512KB) for safety margin
+// - NEON (ARM64): Highly variable (512KB-12MB), use 2^16 (256KB) for portability
+// - WASM/Generic: Conservative 2^15 (128KB) for browser environments
+cfg_if::cfg_if! {
+    if #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))] {
+        // Server CPUs with AVX512 typically have 1MB+ L2 and 10MB+ L3 per core
+        pub const CACHED_FFT_LOG_SIZE: u32 = 18;
+    } else if #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))] {
+        // Consumer CPUs with AVX2 typically have 256KB-1MB L2 and 8-16MB shared L3
+        pub const CACHED_FFT_LOG_SIZE: u32 = 17;
+    } else if #[cfg(all(target_arch = "aarch64", target_feature = "neon"))] {
+        // ARM64 varies widely: Apple Silicon has large caches, embedded ARM may not
+        pub const CACHED_FFT_LOG_SIZE: u32 = 16;
+    } else if #[cfg(target_arch = "wasm32")] {
+        // WASM runs in browsers with limited memory/cache visibility
+        pub const CACHED_FFT_LOG_SIZE: u32 = 15;
+    } else {
+        // Generic fallback
+        pub const CACHED_FFT_LOG_SIZE: u32 = 16;
+    }
+}
 
 pub const MIN_FFT_LOG_SIZE: u32 = 5;
 

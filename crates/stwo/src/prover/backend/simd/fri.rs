@@ -39,7 +39,8 @@ impl FriOps for SimdBackend {
         let itwiddles = domain_line_twiddles_from_tree(domain, &twiddles.itwiddles)[0];
 
         // SAFETY: We write to all positions in the loop below before reading.
-        let mut folded_values = unsafe { SecureColumnByCoords::<Self>::uninitialized(1 << (log_size - 1)) };
+        let mut folded_values =
+            unsafe { SecureColumnByCoords::<Self>::uninitialized(1 << (log_size - 1)) };
 
         for vec_index in 0..(1 << (log_size - 1 - LOG_N_LANES)) {
             let value = {
