@@ -244,7 +244,9 @@ fn bit_reverse16_secure(mut data: [PackedSecureField; 16]) -> [PackedSecureField
 mod tests {
     use itertools::Itertools;
 
-    use super::{bit_reverse16, bit_reverse16_secure, bit_reverse_m31, bit_reverse_secure, MIN_LOG_SIZE};
+    use super::{
+        bit_reverse16, bit_reverse16_secure, bit_reverse_m31, bit_reverse_secure, MIN_LOG_SIZE,
+    };
     use crate::core::fields::m31::BaseField;
     use crate::core::fields::qm31::SecureField;
     use crate::core::utils::bit_reverse as cpu_bit_reverse;
