@@ -577,6 +577,82 @@ impl PolyOps for SimdBackend {
     }
 }
 
+/// Evaluates a polynomial directly into a provided slice, avoiding intermediate allocations.
+/// This is useful when the result will be copied into an existing buffer anyway.
+///
+/// # Safety
+///
+/// The destination slice must have exactly `domain.size() >> LOG_N_LANES` elements.
+///
+/// # Panics
+///
+/// Panics if `domain.log_size() < poly.log_size()` or if the destination slice has the wrong size.
+pub fn evaluate_into_slice(
+    poly: &CircleCoefficients<SimdBackend>,
+    domain: CircleDomain,
+    twiddles: &TwiddleTree<SimdBackend>,
+    dst: &mut [PackedBaseField],
+) {
+    use super::fft::{rfft, MIN_FFT_LOG_SIZE};
+    use crate::core::poly::utils::domain_line_twiddles_from_tree;
+
+    let log_size = domain.log_size();
+    let fft_log_size = poly.log_size();
+    assert!(
+        log_size >= fft_log_size,
+        "Can only evaluate on larger domains"
+    );
+    assert_eq!(
+        dst.len(),
+        domain.size() >> LOG_N_LANES,
+        "Destination slice has wrong size"
+    );
+
+    if fft_log_size < MIN_FFT_LOG_SIZE {
+        // Fall back to CPU implementation for small polynomials
+        let cpu_poly: CircleCoefficients<CpuBackend> =
+            CircleCoefficients::new(poly.coeffs.to_cpu());
+        let cpu_eval = cpu_poly.evaluate(domain);
+        for (i, val) in cpu_eval.values.iter().enumerate() {
+            let vec_idx = i / N_LANES;
+            let lane_idx = i % N_LANES;
+            if lane_idx == 0 {
+                dst[vec_idx] = PackedBaseField::broadcast(*val);
+            } else {
+                let mut arr = dst[vec_idx].to_array();
+                arr[lane_idx] = *val;
+                dst[vec_idx] = PackedBaseField::from_array(arr);
+            }
+        }
+        return;
+    }
+
+    let twiddles = domain_line_twiddles_from_tree(domain, &twiddles.twiddles);
+    let log_subdomains = log_size - fft_log_size;
+
+    for i in 0..(1 << log_subdomains) {
+        let subdomain_twiddles = (0..(fft_log_size - 1))
+            .map(|layer_i| {
+                &twiddles[layer_i as usize]
+                    [i << (fft_log_size - 2 - layer_i)..(i + 1) << (fft_log_size - 2 - layer_i)]
+            })
+            .collect::<Vec<_>>();
+
+        // FFT from the coefficients buffer to the destination slice.
+        unsafe {
+            rfft::fft(
+                transmute::<*const PackedBaseField, *const u32>(poly.coeffs.data.as_ptr()),
+                transmute::<*mut PackedBaseField, *mut u32>(
+                    dst[i << (fft_log_size - LOG_N_LANES)..(i + 1) << (fft_log_size - LOG_N_LANES)]
+                        .as_mut_ptr(),
+                ),
+                &subdomain_twiddles,
+                fft_log_size as usize,
+            );
+        }
+    }
+}
+
 fn compute_small_coset_twiddles(coset: Coset) -> TwiddleTree<SimdBackend> {
     let twiddles = slow_precompute_twiddles(coset);
 

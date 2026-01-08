@@ -4,6 +4,7 @@ use num_traits::Zero;
 use rayon::prelude::*;
 use tracing::{span, Level};
 
+use super::circle::evaluate_into_slice;
 use super::cm31::PackedCM31;
 use super::column::CM31Column;
 use super::domain::CircleDomainBitRevIterator;
@@ -82,18 +83,19 @@ impl QuotientOps for SimdBackend {
         );
 
         // Extend the evaluation to the full domain.
-        // TODO(Ohad): Try to optimize out all these copies.
+        // Optimized: write directly to destination slice, avoiding intermediate allocations.
         for (ci, &c) in subdomain_shifts.iter().enumerate() {
             let subdomain = subdomain.shift(c);
 
             let twiddles = SimdBackend::precompute_twiddles(subdomain.half_coset);
+            let slice_len = subdomain.size() >> LOG_N_LANES;
             for (subeval_poly, extended_eval_column) in
                 zip_eq(&subeval_polys, &mut extended_eval.columns)
             {
-                // Sanity check.
-                let eval = subeval_poly.evaluate_with_twiddles(subdomain, &twiddles);
-                extended_eval_column.data[(ci * eval.data.len())..((ci + 1) * eval.data.len())]
-                    .copy_from_slice(&eval.data);
+                // Evaluate directly into the destination slice.
+                let dst_slice =
+                    &mut extended_eval_column.data[(ci * slice_len)..((ci + 1) * slice_len)];
+                evaluate_into_slice(subeval_poly, subdomain, &twiddles, dst_slice);
             }
         }
         span.exit();

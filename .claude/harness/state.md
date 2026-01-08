@@ -16,8 +16,8 @@ Phase 2: Core Optimizations - FRI and quotient improvements
 ### Phase 2: Core Optimizations (Target: 10-20% cumulative)
 | Optimization | Status | Notes |
 |--------------|--------|-------|
-| FRI direct folding | ⏳ Pending | fri.rs:58-59 - Eliminate intermediate allocations |
-| Quotient memory optimization | ⏳ Pending | quotients.rs:85 - Optimize copies |
+| FRI direct folding | ✅ Completed | fri.rs - Uninitialized memory in fold_line, decompose, fold_circle_evaluation_into_line |
+| Quotient memory optimization | 🔄 In Progress | quotients.rs:85 - Optimize copies |
 | Domain iteration optimization | ⏳ Pending | quotients.rs:136 - Specialized iterators |
 
 ### Phase 3: FFT Deep Dive (Target: 25-40% cumulative)
