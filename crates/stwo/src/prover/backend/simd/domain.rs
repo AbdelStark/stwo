@@ -101,6 +101,18 @@ impl Iterator for CircleDomainBitRevIterator {
     }
 }
 
+/// Extracts spaced y values from 4 consecutive packed y vectors.
+/// This is the deinterleave computation used in quotient accumulation.
+/// For 4 consecutive points in bit-reversed order (P, -P, P+H, -P+H),
+/// this extracts every 4th y value across the packed vectors.
+#[inline(always)]
+pub fn extract_spaced_ys(y0: PackedM31, y1: PackedM31, y2: PackedM31, y3: PackedM31) -> PackedM31 {
+    let (y01, _) = y0.deinterleave(y1);
+    let (y23, _) = y2.deinterleave(y3);
+    let (spaced_ys, _) = y01.deinterleave(y23);
+    spaced_ys
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

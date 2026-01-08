@@ -7,8 +7,8 @@ use tracing::{span, Level};
 use super::circle::evaluate_into_slice;
 use super::cm31::PackedCM31;
 use super::column::CM31Column;
-use super::domain::CircleDomainBitRevIterator;
-use super::m31::{PackedBaseField, LOG_N_LANES, N_LANES};
+use super::domain::{extract_spaced_ys, CircleDomainBitRevIterator};
+use super::m31::{PackedBaseField, PackedM31, LOG_N_LANES, N_LANES};
 use super::qm31::PackedSecureField;
 use super::SimdBackend;
 use crate::core::circle::CirclePoint;
@@ -131,15 +131,12 @@ fn accumulate_quotients_on_subdomain(
     let accumulate = |(quad_row, (points, mut values_dst)): (
         usize,
         (
-            [CirclePoint<PackedBaseField>; 4],
+            [CirclePoint<PackedM31>; 4],
             SecureColumnByCoordsMutSlice<'_>,
         ),
     )| {
-        // TODO(andrew): Spapini said: Use optimized domain iteration. Is there a better way to
-        // do this?
-        let (y01, _) = points[0].y.deinterleave(points[1].y);
-        let (y23, _) = points[2].y.deinterleave(points[3].y);
-        let (spaced_ys, _) = y01.deinterleave(y23);
+        // Extract spaced y values from the 4 consecutive packed points.
+        let spaced_ys = extract_spaced_ys(points[0].y, points[1].y, points[2].y, points[3].y);
         let row_accumulator = accumulate_row_quotients(
             sample_batches,
             columns,
