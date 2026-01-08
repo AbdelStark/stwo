@@ -38,7 +38,8 @@ impl FriOps for SimdBackend {
         let domain = eval.domain();
         let itwiddles = domain_line_twiddles_from_tree(domain, &twiddles.itwiddles)[0];
 
-        let mut folded_values = SecureColumnByCoords::<Self>::zeros(1 << (log_size - 1));
+        // SAFETY: We write to all positions in the loop below before reading.
+        let mut folded_values = unsafe { SecureColumnByCoords::<Self>::uninitialized(1 << (log_size - 1)) };
 
         for vec_index in 0..(1 << (log_size - 1 - LOG_N_LANES)) {
             let value = {
@@ -116,7 +117,8 @@ impl FriOps for SimdBackend {
     ) -> (SecureEvaluation<Self, BitReversedOrder>, SecureField) {
         let lambda = decomposition_coefficient(eval);
         let broadcasted_lambda = PackedSecureField::broadcast(lambda);
-        let mut g_values = SecureColumnByCoords::<Self>::zeros(eval.len());
+        // SAFETY: We write to all positions in the loops below before reading.
+        let mut g_values = unsafe { SecureColumnByCoords::<Self>::uninitialized(eval.len()) };
 
         let range = eval.len().div_ceil(N_LANES);
         let half_range = range / 2;
@@ -144,11 +146,10 @@ pub fn fold_circle_evaluation_into_line(
 ) -> LineEvaluation<SimdBackend> {
     let log_size = eval.domain.log_size();
     let line_domain = LineDomain::new(Coset::half_odds(log_size - 1));
-    let mut line_evaluation = LineEvaluation::new_zero(line_domain);
 
     if log_size <= LOG_N_LANES {
         // Fall back to CPU implementation.
-        let mut cpu_dst = line_evaluation.to_cpu();
+        let mut cpu_dst = LineEvaluation::<SimdBackend>::new_zero(line_domain).to_cpu();
         let secure_evaluation = SecureEvaluation::new(
             eval.domain,
             SecureColumnByCoords::from_base_field_col(&eval.values.to_cpu()),
@@ -160,6 +161,8 @@ pub fn fold_circle_evaluation_into_line(
         );
     }
 
+    // SAFETY: We write to all positions in the loop below before reading.
+    let mut line_evaluation = unsafe { LineEvaluation::new_uninitialized(line_domain) };
     let itwiddles = domain_line_twiddles_from_tree(line_domain, &twiddles.itwiddles)[0];
 
     for vec_index in 0..(1 << (log_size - 1 - LOG_N_LANES)) {
